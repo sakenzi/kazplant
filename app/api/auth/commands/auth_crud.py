@@ -15,37 +15,46 @@ logging.basicConfig(level=logging.INFO)
 async def user_register(user: UserCreate, db: AsyncSession):
     stmt = await db.execute(select(User).filter(User.username==user.username))
     existing_user = stmt.scalar_one_or_none()
-    hashed_password = hash_password(user.password)
 
     if existing_user:
-        await db.execute(
-            update(User)
-            .where(User.username==user.username)
-            .values(
-                username=user.username,
-                full_name=user.full_name,
-                email=user.email,
-                password=hashed_password,
-            )
+        raise HTTPException(
+            status_code=400,
+            detail="Пользователь с таким username уже существует"
         )
-        logger.info(f"Updated user with username: {user.username}")
 
-    else:
-        new_user = User(
-            username=user.username,
-            full_name=user.full_name,
-            email=user.email,
-            password=hashed_password,
-        )
-        db.add(new_user)
-        logger.info(f"Created new user with username: {user.username}")
+    hashed_password = hash_password(user.password)
 
+    new_user = User(
+        username=user.username,
+        full_name=user.full_name,
+        email=user.email,
+        password=hashed_password,
+    )
+    db.add(new_user)
     await db.commit()
+    await db.refresh(new_user)  
+    target_user = new_user
+    logger.info(f"Created new user with username: {user.username}")
 
-    access_token, expire_time = create_access_token(data={"sub": user.username})
+    access_token, expire_time = create_access_token(data={"sub": str(target_user.id)})
 
     return TokenResponse(
         access_token=access_token,
         access_token_expire_time=expire_time
     )
 
+async def user_login(username: str, password: str, db: AsyncSession):
+    stmt = await db.execute(select(User).filter(User.username==username))
+    user = stmt.scalar_one_or_none()
+
+    if not user or not verify_password(password, user.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password"
+        ) 
+    
+    access_token, expire_time  = create_access_token(data={"sub": str(user.id)})
+    return TokenResponse(
+        access_token=access_token,
+        access_token_expire_time=expire_time
+    )
