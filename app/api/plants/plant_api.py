@@ -3,8 +3,8 @@ import httpx
 from fastapi import APIRouter, Depends, UploadFile, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.db import get_db
-from app.api.plants.schemas.response import PlantResponse
-from app.api.plants.commands.plant_crud import create_plant, get_all_plants
+from app.api.plants.schemas.response import PlantResponse, PlantIDResponse
+from app.api.plants.commands.plant_crud import create_plant, get_all_plants, get_plant
 from app.api.plants.commands.g4f_plant import process_plant_data_with_g4f
 import logging
 import os
@@ -141,3 +141,12 @@ async def get_plants(
         }
         for plant in plants
     ]
+
+
+@router.get(
+    "/plant/{plant_id}", 
+    response_model=PlantResponse, 
+    summary="Получить растение по ID"
+)
+async def get_plant_by_id(plant_id: int, db: AsyncSession = Depends(get_db)):
+    return await get_plant(plant_id, db)

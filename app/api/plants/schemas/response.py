@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
+from datetime import datetime
 
 
 class Photo(BaseModel):
@@ -16,6 +17,18 @@ class PlantResponse(BaseModel):
     family: Optional[str] = None
     kingdom: Optional[str] = None
     photos: List[Photo]
+
+    class Config:
+        from_attributes = True
+
+class PlantIDResponse(BaseModel):
+    id: int
+    name: str
+    description: str
+    family: str
+    kingdom: str
+    created_at: datetime
+    photos: List[Photo] = []
 
     class Config:
         from_attributes = True

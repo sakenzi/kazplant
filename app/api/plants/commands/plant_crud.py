@@ -84,3 +84,20 @@ async def get_all_plants(user_id: int, db: AsyncSession):
         return []
     
     return plants
+
+
+async def get_plant(plant_id: int, db: AsyncSession):
+    stmt = select(Plant).options(
+        selectinload(Plant.plant_photo_ids).selectinload(PlantPhotoID.photo)
+    ).filter(Plant.id == plant_id)
+
+    result = await db.execute(stmt)
+    plant = result.scalars().first()
+
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+
+    photos = [photo_id.photo for photo_id in plant.plant_photo_ids if photo_id.photo]
+
+    plant.photos = photos
+    return plant
