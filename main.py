@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.router import route as auth_route
-# from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles
 
 
 app = FastAPI()
 
-# app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 origins = [
     "http://192.168.193.31:5173",  
