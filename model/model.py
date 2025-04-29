@@ -13,6 +13,8 @@ class User(Base):
     password = Column(Text)
     created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
 
+    plants = relationship("Plant", back_populates="user")
+
 
 class Plant(Base):
     __tablename__ = 'plants'
@@ -26,6 +28,9 @@ class Plant(Base):
     kingdom = Column(String(200), default="")
     created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
 
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+
+    user = relationship("User", back_populates="plants")
     plant_photo_ids = relationship("PlantPhotoID", back_populates="plant")
 
 

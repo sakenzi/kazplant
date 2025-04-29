@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 async def create_plant(
+    user_id: int,
     name: str,
     description: str | None,
     probability: float,
@@ -38,6 +39,7 @@ async def create_plant(
     await db.flush()
 
     plant = Plant(
+        user_id=user_id,
         name=name,
         description=description,
         probability=probability,
