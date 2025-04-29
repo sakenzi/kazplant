@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, UploadFile, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.db import get_db
 from app.api.plants.schemas.response import PlantResponse
-from app.api.plants.commands.plant_crud import create_plant
+from app.api.plants.commands.plant_crud import create_plant, get_all_plants
 from app.api.plants.commands.g4f_plant import process_plant_data_with_g4f
 import logging
 import os
@@ -105,3 +105,39 @@ async def identify_plant(
         kingdom=plant.kingdom,
         photos=photos
     )
+
+@router.get(
+    "/plants",
+    summary="Получить все растения пользователя",
+    response_model=list[PlantResponse]
+)
+async def get_plants(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        access_token = await get_access_token(request)
+        user_id_str = await validate_access_token(access_token)
+        user_id = int(user_id_str)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    plants = await get_all_plants(user_id=user_id, db=db)
+
+    return [
+        {
+            "id": plant.id,
+            "name": plant.name,
+            "description": plant.description,
+            "family": plant.family,
+            "kingdom": plant.kingdom,
+            "photos": [
+                {
+                    "id": rel.photo.id,
+                    "photo": rel.photo.photo
+                }
+                for rel in plant.plant_photo_ids if rel.photo is not None
+            ]
+        }
+        for plant in plants
+    ]

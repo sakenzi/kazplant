@@ -14,6 +14,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
 
     plants = relationship("Plant", back_populates="user")
+    leafs = relationship("Leaf", back_populates="user")
 
 
 class Plant(Base):
@@ -54,14 +55,21 @@ class PlantPhotoID(Base):
     photo = relationship("PlantPhoto", back_populates="plant_photo_ids")
 
 
-
 class Leaf(Base):
     __tablename__ = 'leafs'
 
     id = Column(Integer, primary_key=True, index=True)
     photo = Column(Text, default="")
+    diseases = Column(Text, default="")
+    treatment = Column(Text, default="")
+    prevention = Column(Text, default="")
     created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", back_populates='leafs')
 
     # plant_id = Column(Integer, ForeignKey("plants.id"), nullable=True)
 
     # plant = relationship("Plant", back_populates="leafs")
+

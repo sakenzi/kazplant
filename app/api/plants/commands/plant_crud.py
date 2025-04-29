@@ -5,6 +5,8 @@ from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from model.model import Plant, PlantPhoto, PlantPhotoID
 import logging
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 
 logger = logging.getLogger(__name__)
@@ -66,3 +68,19 @@ async def create_plant(
 
     logger.info(f"Plant created with id={plant.id}")
     return plant
+
+
+async def get_all_plants(user_id: int, db: AsyncSession):
+    stmt = await db.execute(
+        select(Plant)
+        .filter(Plant.user_id == user_id)
+        .options(
+            selectinload(Plant.plant_photo_ids).selectinload(PlantPhotoID.photo)
+        )
+    )
+    plants = stmt.scalars().unique().all()
+
+    if not plants:
+        return []
+    
+    return plants
