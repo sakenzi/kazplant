@@ -60,16 +60,31 @@ class Leaf(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     photo = Column(Text, default="")
-    diseases = Column(Text, default="")
-    treatment = Column(Text, default="")
-    prevention = Column(Text, default="")
     created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
 
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     user = relationship("User", back_populates='leafs')
+    leaf_diseases = relationship("LeafDisease", back_populates="leaf")
 
-    # plant_id = Column(Integer, ForeignKey("plants.id"), nullable=True)
 
-    # plant = relationship("Plant", back_populates="leafs")
+class Disease(Base):
+    __tablename__ = 'diseases'
 
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), default="")
+    treatment = Column(Text, default="")
+    prevention = Column(Text, default="")
+
+    leaf_diseases = relationship("LeafDisease", back_populates="disease")
+
+
+class LeafDisease(Base):
+    __tablename__ = "leaf_diseases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    leaf_id = Column(Integer, ForeignKey("leafs.id"), nullable=True)
+    disease_id = Column(Integer, ForeignKey("diseases.id"), nullable=True)
+
+    leaf = relationship("Leaf", back_populates="leaf_diseases")
+    disease = relationship("Disease", back_populates="leaf_diseases")
