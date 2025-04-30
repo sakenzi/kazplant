@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 UPLOAD_DIR = "uploads/photos/leafs"
 
 async def create_leaf(
-    file: UploadFile,
+    photo: UploadFile,
     db: AsyncSession, 
     user_id: int
 ) -> LeafDisease:
@@ -20,7 +20,7 @@ async def create_leaf(
     path = f"{UPLOAD_DIR}/{filename}"
 
     with open(path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        shutil.copyfileobj(photo.file, buffer)
 
     disease_id = classify_leaf(path)  
 

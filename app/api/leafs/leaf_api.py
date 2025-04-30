@@ -16,7 +16,7 @@ router = APIRouter()
 )
 async def upload_leaf(
     request: Request,
-    file: UploadFile = File(...),
+    photo: UploadFile = File(...),
     db: AsyncSession = Depends(get_db)
 ):
     try:
@@ -26,7 +26,7 @@ async def upload_leaf(
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
-    return await create_leaf(file=file, db=db, user_id=user_id)
+    return await create_leaf(photo=photo, db=db, user_id=user_id)
 
 @router.get(
     "/all-leafs",
