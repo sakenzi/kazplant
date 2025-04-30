@@ -88,3 +88,35 @@ class LeafDisease(Base):
 
     leaf = relationship("Leaf", back_populates="leaf_diseases")
     disease = relationship("Disease", back_populates="leaf_diseases")
+
+
+"""AI"""
+class AIPlant(Base):
+    __tablename__ = "ai_plants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(Text, default="")
+
+    ai_photos = relationship("AIPhoto", back_populates="ai_plant")
+
+
+class AIType(Base):
+    __tablename__ = "ai_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type_name = Column(String(100), default="")
+
+    ai_photos = relationship("AIPhoto", back_populates="ai_type")
+
+
+class AIPhoto(Base):
+    __tablename__ = "ai_photos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    photo = Column(Text, default="")
+
+    ai_plant_id = Column(Integer, ForeignKey("ai_plants.id"), nullable=True)
+    ai_type_id = Column(Integer, ForeignKey("ai_types.id"), nullable=True)
+
+    ai_plant = relationship("AIPlant", back_populates="ai_photos")
+    ai_type = relationship("AIType", back_populates="ai_photos")
