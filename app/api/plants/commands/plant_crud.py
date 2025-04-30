@@ -101,3 +101,13 @@ async def get_plant(plant_id: int, db: AsyncSession):
 
     plant.photos = photos
     return plant
+
+
+async def get_plants_from_db(db: AsyncSession):
+    stmt = await db.execute(
+        select(Plant)
+        .options(
+            selectinload(Plant.plant_photo_ids).selectinload(PlantPhotoID.photo)
+        )
+    )
+    return stmt.scalars().unique().all()

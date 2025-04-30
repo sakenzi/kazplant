@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, UploadFile, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.db import get_db
 from app.api.plants.schemas.response import PlantResponse, PlantIDResponse
-from app.api.plants.commands.plant_crud import create_plant, get_all_plants, get_plant
+from app.api.plants.commands.plant_crud import create_plant, get_all_plants, get_plant, get_plants_from_db
 from app.api.plants.commands.g4f_plant import process_plant_data_with_g4f
 import logging
 import os
@@ -101,6 +101,7 @@ async def identify_plant(
         id=plant.id,
         name=plant.name,
         description=plant.description,
+        probability=plant.probability,
         family=plant.family,
         kingdom=plant.kingdom,
         photos=photos
@@ -129,6 +130,7 @@ async def get_plants(
             "id": plant.id,
             "name": plant.name,
             "description": plant.description,
+            "probability": plant.probability,
             "family": plant.family,
             "kingdom": plant.kingdom,
             "photos": [
@@ -150,3 +152,33 @@ async def get_plants(
 )
 async def get_plant_by_id(plant_id: int, db: AsyncSession = Depends(get_db)):
     return await get_plant(plant_id, db)
+
+
+@router.get(
+    "/all-plants",
+    summary="Получить все растения",
+    response_model=list[PlantResponse]
+)
+async def get_plants(
+    db: AsyncSession = Depends(get_db)
+):  
+    plants = await get_plants_from_db(db=db)  
+
+    return [
+        {
+            "id": plant.id,
+            "name": plant.name,
+            "description": plant.description,
+            "probability": plant.probability,
+            "family": plant.family,
+            "kingdom": plant.kingdom,
+            "photos": [
+                {
+                    "id": rel.photo.id,
+                    "photo": rel.photo.photo
+                }
+                for rel in plant.plant_photo_ids if rel.photo is not None
+            ]
+        }
+        for plant in plants
+    ]
