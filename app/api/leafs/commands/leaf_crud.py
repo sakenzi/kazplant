@@ -6,6 +6,7 @@ from model.model import Leaf, Disease, LeafDisease
 from app.api.leafs.commands.model import classify_leaf
 from fastapi import UploadFile, HTTPException
 from sqlalchemy import insert
+from sqlalchemy.orm import selectinload
 
 
 UPLOAD_DIR = "uploads/photos/leafs"
@@ -39,3 +40,13 @@ async def create_leaf(
     await db.refresh(leaf_disease, attribute_names=["leaf", "disease"])
 
     return leaf_disease
+
+
+async def get_all_leafs(user_id: int, db: AsyncSession):
+    result = await db.execute(
+        select(LeafDisease)
+        .join(LeafDisease.leaf)
+        .options(selectinload(LeafDisease.leaf), selectinload(LeafDisease.disease))
+        .where(LeafDisease.leaf.has(user_id=user_id))
+    )
+    return result.scalars().all()
