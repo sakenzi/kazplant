@@ -1,8 +1,4 @@
-from celery import Celery
+from app.api.training.celery.celery_app import celery
 
-
-celery_app = Celery(
-    "worker",
-    broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/0"
-)
+if __name__ == "__main__":
+    celery.worker_main(["worker", "--loglevel=info", "--concurrency=1"])

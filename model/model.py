@@ -120,3 +120,30 @@ class AIPhoto(Base):
 
     ai_plant = relationship("AIPlant", back_populates="ai_photos")
     ai_type = relationship("AIType", back_populates="ai_photos")
+
+
+class TrainingSession(Base):
+    __tablename__ = "training_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String(100), default="")
+    epochs = Column(Integer, default=0)
+    batch_size = Column(Integer, default=0)
+    best_val_accuracy = Column(Float, default=0)
+    created_at = Column(DateTime(timezone=True), default=func.now(), nullable=False)
+
+    training_epochs = relationship("TrainingEpoch", back_populates="training_session")
+
+
+class TrainingEpoch(Base):
+    __tablename__ = "training_epochs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    epoch_num = Column(Integer, default=0)
+    train_loss = Column(Float, default=0)
+    train_accuracy = Column(Float, default=0)
+    val_accuracy = Column(Float, default=0)
+    
+    training_session_id = Column(Integer, ForeignKey("training_sessions.id"), nullable=True)
+
+    training_session = relationship("TrainingSession", back_populates="training_epochs")
