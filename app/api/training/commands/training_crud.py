@@ -7,7 +7,8 @@ from fastapi import UploadFile
 from app.api.training.celery.tasks import start_training_task
 
 
-UPLOAD_DIR = "dataset"
+TRAIN_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/train"
+VALID_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/valid"
 
 async def save_photos_and_trigger_training(
     db: AsyncSession,
@@ -19,7 +20,9 @@ async def save_photos_and_trigger_training(
 ):
     saved_paths = []
 
-    folder_path = os.path.join(UPLOAD_DIR, str(type_id), str(plant_id))
+    base_dir = TRAIN_DIR if type_id == 1 else VALID_DIR
+
+    folder_path = os.path.join(base_dir, str(plant_id))
     os.makedirs(folder_path, exist_ok=True)
 
     for file in files:

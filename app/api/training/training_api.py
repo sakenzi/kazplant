@@ -4,12 +4,11 @@ from database.db import get_db
 from typing import List
 from app.api.training.commands.training_crud import save_photos_and_trigger_training
 
-
 router = APIRouter()
 
 @router.post(
     "/train-model",
-    summary="обучить модель",
+    summary="Train the model",
 )
 async def train_model_api(
     type_id: int = Form(...),
