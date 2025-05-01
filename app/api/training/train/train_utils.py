@@ -10,7 +10,7 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-def train_model_script(batch_size: int, num_epochs: int, db):
+def train_model_script(batch_size: int, num_epochs: int, db, name_model: str):
     train_dir = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/train"
     val_dir = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/valid"
     
@@ -23,4 +23,4 @@ def train_model_script(batch_size: int, num_epochs: int, db):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    start_training(train_loader, val_loader, batch_size, num_epochs, db)
+    start_training(train_loader, val_loader, batch_size, num_epochs, db, name_model)
