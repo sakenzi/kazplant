@@ -2,7 +2,9 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.db import get_db
 from typing import List
-from app.api.training.commands.training_crud import save_photos_and_trigger_training
+from app.api.training.commands.training_crud import save_photos_and_trigger_training, get_training_sessions
+from app.api.training.schemas.response import TrainingSessionResponse
+
 
 router = APIRouter()
 
@@ -35,3 +37,17 @@ async def train_model_api(
         batch=batch,
         name_model=name_model
     )
+
+@router.get(
+    "/get-training_sessions",
+    summary="Получить информацию о тренировочных сессиях",
+    response_model=List[TrainingSessionResponse]
+)
+async def get_training_sessions_api(db: AsyncSession = Depends(get_db)):
+    try:
+        sessions = await get_training_sessions(db)
+        return [TrainingSessionResponse(**session) for session in sessions]
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
