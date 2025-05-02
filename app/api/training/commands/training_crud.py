@@ -9,58 +9,29 @@ from typing import List, Optional
 from sqlalchemy import select, func
 
 
-TRAIN_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/train"
-VALID_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/valid"
+TRAIN_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/classification/New Plant Diseases Dataset(Augmented)/train"
+VALID_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/classification/New Plant Diseases Dataset(Augmented)/valid"
 
-async def save_photos_and_trigger_training(
+async def trigger_training(
     db: AsyncSession,
-    files: list[UploadFile],
-    plant_id: int,
-    type_id: int,
     epoch: int,
     batch: int,
     name_model: str
-):
-    saved_paths = []
+) -> dict:
+    if epoch <= 0:
+        raise ValueError("Number of epochs must be positive")
+    if batch <= 0:
+        raise ValueError("Batch size must be positive")
 
-    if type_id == 1:
-        base_dir = TRAIN_DIR
-    elif type_id == 2:
-        base_dir = VALID_DIR
-    else:
-        raise ValueError(f"Invalid type_id: {type_id}. Expected 1 (train) or 2 (valid)")
-
-    plant = await db.get(AIPlant, plant_id)
-    if not plant:
-        raise ValueError(f"Plant with ID {plant_id} not found")
-
-    ai_type = await db.get(AIType, type_id)
-    if not ai_type:
-        raise ValueError(f"Type with ID {type_id} not found")
-
-    folder_path = os.path.join(base_dir, plant.name)
-    os.makedirs(folder_path, exist_ok=True)
-
-    for file in files:
-        filename = f"{uuid.uuid4()}.jpg"
-        file_path = os.path.join(folder_path, filename)
-
-        with open(file_path, "wb") as buffer:
-            buffer.write(await file.read())
-
-        photo = AIPhoto(
-            photo=file_path.replace("\\", "/"),
-            ai_type_id=type_id,
-            ai_plant_id=plant_id
-        )
-        db.add(photo)
-        saved_paths.append(file_path)
-
-    await db.commit()
+    if not os.path.exists(TRAIN_DIR) or not os.listdir(TRAIN_DIR):
+        raise ValueError(f"No training data found in {TRAIN_DIR}")
 
     task = start_training_task.delay(batch=batch, epoch=epoch, name_model=name_model)
 
-    return {"message": "Photos saved and training started", "files": saved_paths, "task_id": task.id}
+    return {
+        "message": "Training started",
+        "task_id": task.id
+    }
 
 async def get_training_sessions(db: AsyncSession) -> List[dict]:
     num_classes_query = select(func.count(func.distinct(AIPlant.name)))

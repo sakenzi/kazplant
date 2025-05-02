@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.db import get_db
 from typing import List
-from app.api.training.commands.training_crud import save_photos_and_trigger_training, get_training_sessions, get_training_session_by_id
+from app.api.training.commands.training_crud import trigger_training, get_training_sessions, get_training_session_by_id
 from app.api.training.schemas.response import TrainingSessionResponse, TrainingSessionIDResponse
 
 
@@ -13,30 +13,29 @@ router = APIRouter()
     summary="Обучение AI",
 )
 async def train_model_api(
-    type_id: int = Form(...),
-    plant_id: int = Form(...),
     epoch: int = Form(...),
     batch: int = Form(...),
     name_model: str = Form("resnet50"),
-    files: List[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db)
 ):
-    if not files:
-        raise HTTPException(status_code=400, detail="No files provided")
-    
-    supported_models = ["resnet50", "resnet18", "vgg16"]  
+    supported_models = ["resnet50", "resnet18", "vgg16"]
     if name_model not in supported_models:
-        raise HTTPException(status_code=400, detail=f"Unsupported model: {name_model}. Supported models: {supported_models}")
-    
-    return await save_photos_and_trigger_training(
-        db=db,
-        files=files,
-        plant_id=plant_id,
-        type_id=type_id,
-        epoch=epoch,
-        batch=batch,
-        name_model=name_model
-    )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported model: {name_model}. Supported models: {supported_models}"
+        )
+
+    try:
+        return await trigger_training(
+            db=db,
+            epoch=epoch,
+            batch=batch,
+            name_model=name_model
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.get(
     "/get-training_sessions",

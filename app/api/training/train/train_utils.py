@@ -11,8 +11,8 @@ transform = transforms.Compose([
 ])
 
 def train_model_script(batch_size: int, num_epochs: int, db, name_model: str):
-    train_dir = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/train"
-    val_dir = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/valid"
+    train_dir = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/classification/New Plant Diseases Dataset(Augmented)/train"
+    val_dir = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/classification/New Plant Diseases Dataset(Augmented)/valid"
     
     if not os.path.exists(train_dir) or not os.path.exists(val_dir):
         raise FileNotFoundError(f"Train or validation directory not found: {train_dir}, {val_dir}")
