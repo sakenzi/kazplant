@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import os
-from model.model import AIPlant, AIType, AIPhoto
+from model.model import AIPlant, AIType, AIPhoto, TypeDataset
 import logging
 from fastapi import HTTPException
 from sqlalchemy.sql import text, func
@@ -120,3 +120,62 @@ async def get_all_plants_with_photo_info(db: AsyncSession, limit: int = 10) -> l
         ))
 
     return plant_data
+
+async def upload_photos(
+    db: AsyncSession,
+    ai_plant_id: int,
+    ai_type_id: int,
+    type_dataset_id: int,
+    files: List[UploadFile]
+) -> dict:
+    plant = await db.get(AIPlant, ai_plant_id)
+    if not plant:
+        logger.error(f"Plant with ID {ai_plant_id} not found")
+        raise HTTPException(status_code=404, detail=f"Plant with ID {ai_plant_id} not found")
+    
+    ai_type = await db.get(AIType, ai_type_id)
+    if not ai_type:
+        logger.error(f"Type with ID {ai_type_id} not found")
+        raise HTTPException(status_code=404, detail=f"Type with ID {ai_type_id} not found")
+    
+    type_dataset = await db.get(TypeDataset, type_dataset_id)
+    if not type_dataset:
+        logger.error(f"Dataset type with ID {type_dataset_id} not found")
+        raise HTTPException(status_code=404, detail=f"Dataset type with ID {type_dataset_id} not found")
+    
+    folder_path = TRAIN_DIR if ai_type.type_name.lower() == "train" else VALID_DIR
+    plant_folder = os.path.join(folder_path, plant.name)
+
+    try:
+        os.makedirs(plant_folder, exist_ok=True)
+        logger.info(f"Ensured folder exists: {plant_folder}")
+    except OSError as e:
+        logger.error(f"Failed to create folder {plant_folder}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create folder: {str(e)}")
+    
+    saved_paths = []
+    for file in files:
+        filename = f"{uuid.uuid4()}.jpg"
+        file_path = os.path.join(plant_folder, filename)
+        try:
+            with open(file_path, "wb") as buffer:
+                buffer.write(await file.read())
+            photo = AIPhoto(
+                photo=file_path.replace("\\", "/"),
+                ai_plant_id=ai_plant_id,
+                ai_type_id=ai_type_id,
+                type_dataset_id=type_dataset_id
+            )
+            db.add(photo)
+            saved_paths.append(file_path)
+        except Exception as e:
+            logger.error(f"Failed to save photo {filename}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to save photo: {str(e)}")
+
+    await db.commit()
+    logger.info(f"Saved {len(saved_paths)} photos for plant ID {ai_plant_id} in {plant_folder}")
+
+    return {
+        "photo_count": len(saved_paths),
+        "saved_paths": saved_paths
+    }
