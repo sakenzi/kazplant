@@ -1,17 +1,23 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import os
-from model.model import AIPlant, AIType
+from model.model import AIPlant, AIType, AIPhoto
 import logging
 from fastapi import HTTPException
-from sqlalchemy.sql import text
+from sqlalchemy.sql import text, func
+from typing import List
+from fastapi import UploadFile
+import uuid
+import random
+from app.api.ai_plants.schemas.response import PlantPhotoInfo
+from sqlalchemy.orm import selectinload
 
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-TRAIN_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/train"
-VALID_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/New Plant Diseases Dataset(Augmented)/valid"
+TRAIN_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/classification/New Plant Diseases Dataset(Augmented)/train"
+VALID_DIR = "C:/projects/FASTAPI/kazplant/kazplant/new_plant/classification/New Plant Diseases Dataset(Augmented)/valid"
 
 async def get_all_ai_plants(db: AsyncSession):
     stmt = await db.execute(select(AIPlant))
@@ -31,7 +37,11 @@ async def get_all_ai_types(db: AsyncSession):
     
     return ai_types
 
-async def create_ai_plant(db: AsyncSession, name: str) -> AIPlant:
+async def create_ai_plant(
+    db: AsyncSession,
+    name: str,
+    files: List[UploadFile] | None = None
+) -> AIPlant:
     if not name or not name.strip():
         logger.error("Название растения не может быть пустым")
         raise HTTPException(status_code=400, detail="Название класса не может быть пустым")
@@ -63,4 +73,50 @@ async def create_ai_plant(db: AsyncSession, name: str) -> AIPlant:
     await db.refresh(db_plant)
     logger.info(f"Plant saved with ID: {db_plant.id}")
 
+    if files:
+        saved_paths = []
+        folder_path = train_folder_path  
+        for file in files:
+            filename = f"{uuid.uuid4()}.jpg"
+            file_path = os.path.join(folder_path, filename)
+            try:
+                with open(file_path, "wb") as buffer:
+                    buffer.write(await file.read())
+                photo = AIPhoto(
+                    photo=file_path.replace("\\", "/"),
+                    ai_plant_id=db_plant.id,
+                    ai_type_id=None,  
+                    type_dataset_id=None  
+                )
+                db.add(photo)
+                saved_paths.append(file_path)
+            except Exception as e:
+                logger.error(f"Failed to save photo {filename}: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to save photo: {str(e)}")
+        
+        await db.commit()
+        logger.info(f"Saved {len(saved_paths)} photos for plant '{folder_name}' (ID: {db_plant.id}) in {folder_path}")
+
     return db_plant
+
+async def get_all_plants_with_photo_info(db: AsyncSession, limit: int = 10) -> list[PlantPhotoInfo]:
+    result = await db.execute(
+        select(AIPlant).options(selectinload(AIPlant.ai_photos)).limit(limit)
+    )
+    plants = result.scalars().all()
+
+    plant_data = []
+
+    for plant in plants:
+        photos = plant.ai_photos
+        total_photos = len(photos)
+        random_photo = random.choice(photos).photo if total_photos > 0 else None
+
+        plant_data.append(PlantPhotoInfo(
+            plant_id=plant.id,
+            plant_name=plant.name,
+            random_photo=random_photo,
+            total_photos=total_photos
+        ))
+
+    return plant_data

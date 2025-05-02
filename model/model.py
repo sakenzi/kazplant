@@ -109,6 +109,15 @@ class AIType(Base):
     ai_photos = relationship("AIPhoto", back_populates="ai_type")
 
 
+class TypeDataset(Base):
+    __tablename__ = "type_datasets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), default="")
+
+    ai_photos = relationship("AIPhoto", back_populates="type_dataset")
+
+
 class AIPhoto(Base):
     __tablename__ = "ai_photos"
 
@@ -117,9 +126,11 @@ class AIPhoto(Base):
 
     ai_plant_id = Column(Integer, ForeignKey("ai_plants.id"), nullable=True)
     ai_type_id = Column(Integer, ForeignKey("ai_types.id"), nullable=True)
+    type_dataset_id = Column(Integer, ForeignKey("type_datasets.id"), nullable=True)
 
     ai_plant = relationship("AIPlant", back_populates="ai_photos")
     ai_type = relationship("AIType", back_populates="ai_photos")
+    type_dataset = relationship("TypeDataset", back_populates="ai_photos")
 
 
 class TrainingSession(Base):

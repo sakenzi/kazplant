@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.db import get_db
-from app.api.ai_plants.commands.ai_plant_crud import get_all_ai_plants, get_all_ai_types, create_ai_plant
-from app.api.ai_plants.schemas.response import AIPlantsResponse, AITypesResponse
+from app.api.ai_plants.commands.ai_plant_crud import get_all_ai_plants, get_all_ai_types, get_all_plants_with_photo_info
+from app.api.ai_plants.schemas.response import AIPlantsResponse, AITypesResponse, PlantPhotoInfo
 from app.api.ai_plants.schemas.create import AiPlantCreate
 import logging
+from typing import List
+from sqlalchemy import select
+from model.model import AIPlant
 
 
 logger = logging.getLogger(__name__)
@@ -28,18 +31,7 @@ async def get_ai_plants(db: AsyncSession = Depends(get_db)):
 async def get_types(db: AsyncSession = Depends(get_db)):
     return await get_all_ai_types(db=db)
 
-@router.post(
-    "/create-classes",
-    summary="создание класса",
-    response_model=AiPlantCreate
-)
-async def create_ai_plant_endpoint(plant: AiPlantCreate, db: AsyncSession = Depends(get_db)):
-    logger.info(f"Received request to create plant with name: {plant.name}")
-    try:
-        db_plant = await create_ai_plant(db, plant.name)
-        return AiPlantCreate(name=db_plant.name)
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"Unexpected error while creating plant: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+@router.get("/plants-info", response_model=List[PlantPhotoInfo])
+async def get_plants_info(limit: int = Query(10, ge=1, le=100), db: AsyncSession = Depends(get_db)):
+    return await get_all_plants_with_photo_info(db, limit=limit)
+    
