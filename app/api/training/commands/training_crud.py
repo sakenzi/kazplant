@@ -1,9 +1,6 @@
 import os
-import shutil
-import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
-from model.model import AIPhoto, AIPlant, AIType, TrainingSession, TrainingEpoch
-from fastapi import UploadFile
+from model.model import AIPlant, TrainingSession, TrainingEpoch
 from app.api.training.celery.tasks import start_training_task
 from typing import List, Optional
 from sqlalchemy import select, func
@@ -23,8 +20,42 @@ async def trigger_training(
     if batch <= 0:
         raise ValueError("Batch size must be positive")
 
-    if not os.path.exists(TRAIN_DIR) or not os.listdir(TRAIN_DIR):
-        raise ValueError(f"No training data found in {TRAIN_DIR}")
+    plants_query = select(AIPlant.name)
+    plants_result = await db.execute(plants_query)
+    db_classes = {row.name for row in plants_result}
+    if not db_classes:
+        raise ValueError("No classes found in database")
+
+    if not os.path.exists(TRAIN_DIR):
+        raise ValueError(f"Training directory {TRAIN_DIR} does not exist")
+    
+    train_classes = [d for d in os.listdir(TRAIN_DIR) if os.path.isdir(os.path.join(TRAIN_DIR, d))]
+    if not train_classes:
+        raise ValueError(f"No class directories found in {TRAIN_DIR}")
+    
+    for class_dir in train_classes:
+        class_path = os.path.join(TRAIN_DIR, class_dir)
+        images = [f for f in os.listdir(class_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp'))]
+        if not images:
+            raise ValueError(f"No valid images found in {class_path}")
+
+    if not os.path.exists(VALID_DIR):
+        raise ValueError(f"Validation directory {VALID_DIR} does not exist")
+    
+    valid_classes = [d for d in os.listdir(VALID_DIR) if os.path.isdir(os.path.join(VALID_DIR, d))]
+    if not valid_classes:
+        raise ValueError(f"No class directories found in {VALID_DIR}")
+    
+    for class_dir in valid_classes:
+        class_path = os.path.join(VALID_DIR, class_dir)
+        images = [f for f in os.listdir(class_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif', '.tiff', '.webp'))]
+        if not images:
+            raise ValueError(f"No valid images found in {class_path}")
+
+    if set(train_classes) != set(valid_classes):
+        raise ValueError(f"Classes in {TRAIN_DIR} ({train_classes}) do not match classes in {VALID_DIR} ({valid_classes})")
+    if set(train_classes) != db_classes:
+        raise ValueError(f"Classes in {TRAIN_DIR} ({train_classes}) do not match classes in database ({db_classes})")
 
     task = start_training_task.delay(batch=batch, epoch=epoch, name_model=name_model)
 

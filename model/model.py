@@ -158,3 +158,35 @@ class TrainingEpoch(Base):
     training_session_id = Column(Integer, ForeignKey("training_sessions.id"), nullable=True)
 
     training_session = relationship("TrainingSession", back_populates="training_epochs")
+
+
+class Segmentation(Base):
+    __tablename__ = "segmentations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name_data = Column(String(100), default="")
+
+    segmentation_photos = relationship("SegmentationPhoto", back_populates="segmentation")
+
+
+class SegmentationType(Base):
+    __tablename__ = "segmentation_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type_name = Column(String(100), default="")
+
+    segmentation_photos = relationship("SegmentationPhoto", back_populates="segmentation_type")
+
+
+class SegmentationPhoto(Base):
+    __tablename__ = "segmentaion_photos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    photo = Column(Text, default="")
+    mask_path = Column(Text, default="")
+
+    segmentation_id = Column(Integer, ForeignKey("segmentations.id"))
+    segmentation_type_id = Column(Integer, ForeignKey("segmentation_types.id"))
+
+    segmentation = relationship("Segmentation", back_populates="segmentation_photos")
+    segmentation_type = relationship("SegmentationType", back_populates="segmentation_photos")

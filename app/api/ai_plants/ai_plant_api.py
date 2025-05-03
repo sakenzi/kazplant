@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.db import get_db
-from app.api.ai_plants.commands.ai_plant_crud import get_all_ai_plants, get_all_ai_types, get_all_plants_with_photo_info, upload_photos, create_ai_plant
+from app.api.ai_plants.commands.ai_plant_crud import (get_all_ai_plants, get_all_ai_types, 
+                                                      get_all_plants_with_photo_info, upload_photos, 
+                                                      create_ai_plant, get_plants_by_type_id)
 from app.api.ai_plants.schemas.response import AIPlantsResponse, AITypesResponse, PlantPhotoInfo
 from app.api.ai_plants.schemas.create import AiPlantCreate, UploadPhotosResponse
 import logging
@@ -71,15 +73,35 @@ async def get_plants_info(limit: int = Query(10, ge=1, le=100), db: AsyncSession
 async def upload_photos_endpoint(
     ai_plant_id: int = Form(...),
     ai_type_id: int = Form(...),
-    type_dataset_id: int = Form(...),
     files: List[UploadFile] = File(...),
     db: AsyncSession = Depends(get_db)
 ):
     try:
-        result = await upload_photos(db, ai_plant_id, ai_type_id, type_dataset_id, files)
+        result = await upload_photos(db, ai_plant_id, ai_type_id, files)
         return UploadPhotosResponse(**result)
     except HTTPException as e:
         raise e
     except Exception as e:
         logger.error(f"Unexpected error in upload_photos_endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+    
+
+@router.get(
+    "/plants_by_type/{type_id}",
+    response_model=List[PlantPhotoInfo],
+    summary="Получить растения по ID типа"
+)
+async def get_plants_by_type(
+    type_id: int,
+    limit: int = Query(10, ge=1, le=100, description="Максимальное количество возвращаемых растений"),
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        plants_info = await get_plants_by_type_id(db, type_id=type_id, limit=limit)
+        logger.info(f"Returning {len(plants_info)} plants with type_id {type_id}")
+        return plants_info
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error in get_plants_by_type: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

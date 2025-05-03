@@ -18,6 +18,7 @@ class AITypesResponse(BaseModel):
 
 class PlantPhotoInfo(BaseModel):
     plant_id: int
+    type_id: int
     plant_name: str
     random_photo: Optional[str] = None
     total_photos: int

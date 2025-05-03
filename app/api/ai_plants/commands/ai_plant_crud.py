@@ -112,8 +112,14 @@ async def get_all_plants_with_photo_info(db: AsyncSession, limit: int = 10) -> l
         total_photos = len(photos)
         random_photo = random.choice(photos).photo if total_photos > 0 else None
 
+        if total_photos > 0:
+            random_photo_obj = random.choice(photos)
+            random_photo = random_photo_obj.photo
+            type_id = random_photo_obj.ai_type_id
+
         plant_data.append(PlantPhotoInfo(
             plant_id=plant.id,
+            type_id=type_id,
             plant_name=plant.name,
             random_photo=random_photo,
             total_photos=total_photos
@@ -125,7 +131,6 @@ async def upload_photos(
     db: AsyncSession,
     ai_plant_id: int,
     ai_type_id: int,
-    type_dataset_id: int,
     files: List[UploadFile]
 ) -> dict:
     plant = await db.get(AIPlant, ai_plant_id)
@@ -137,11 +142,6 @@ async def upload_photos(
     if not ai_type:
         logger.error(f"Type with ID {ai_type_id} not found")
         raise HTTPException(status_code=404, detail=f"Type with ID {ai_type_id} not found")
-    
-    type_dataset = await db.get(TypeDataset, type_dataset_id)
-    if not type_dataset:
-        logger.error(f"Dataset type with ID {type_dataset_id} not found")
-        raise HTTPException(status_code=404, detail=f"Dataset type with ID {type_dataset_id} not found")
     
     folder_path = TRAIN_DIR if ai_type.type_name.lower() == "train" else VALID_DIR
     plant_folder = os.path.join(folder_path, plant.name)
@@ -164,7 +164,6 @@ async def upload_photos(
                 photo=file_path.replace("\\", "/"),
                 ai_plant_id=ai_plant_id,
                 ai_type_id=ai_type_id,
-                type_dataset_id=type_dataset_id
             )
             db.add(photo)
             saved_paths.append(file_path)
@@ -179,3 +178,43 @@ async def upload_photos(
         "photo_count": len(saved_paths),
         "saved_paths": saved_paths
     }
+
+async def get_plants_by_type_id(db: AsyncSession, type_id: int, limit: int = 10) -> List[PlantPhotoInfo]:
+    type_exists = await db.execute(select(AIType).where(AIType.id == type_id))
+    if not type_exists.scalars().first():
+        logger.error(f"Type with ID {type_id} not found")
+        raise HTTPException(status_code=404, detail=f"Type with ID {type_id} not found")
+
+    result = await db.execute(
+        select(AIPlant)
+        .join(AIPhoto, AIPhoto.ai_plant_id == AIPlant.id)
+        .where(AIPhoto.ai_type_id == type_id)
+        .options(selectinload(AIPlant.ai_photos))
+        .group_by(AIPlant.id)
+        .limit(limit)
+    )
+    plants = result.scalars().all()
+
+    plant_data = []
+
+    for plant in plants:
+        photos = [photo for photo in plant.ai_photos if photo.ai_type_id == type_id]
+        total_photos = len(photos)
+        random_photo = None
+
+        if total_photos > 0:
+            random_photo_obj = random.choice(photos)
+            random_photo = random_photo_obj.photo
+        else:
+            logger.warning(f"No photos with type_id {type_id} for plant {plant.name}")
+
+        plant_data.append(PlantPhotoInfo(
+            plant_id=plant.id,
+            type_id=type_id,
+            plant_name=plant.name,
+            random_photo=random_photo,
+            total_photos=total_photos
+        ))
+
+    logger.info(f"Retrieved {len(plant_data)} plants with type_id {type_id}")
+    return plant_data
