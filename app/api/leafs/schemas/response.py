@@ -28,3 +28,7 @@ class LeafDiseaseResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SegmentationResult(BaseModel):
+    infection_ratio: float
+    infection_level: str
